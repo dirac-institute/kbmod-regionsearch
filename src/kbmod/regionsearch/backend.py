@@ -5,7 +5,7 @@ lincc-frameworks provides implementations of ``abstractions.Backend`` that may b
 from dataclasses import dataclass
 
 import numpy as np
-from astropy import coordinates as coord
+from astropy import coordinates as coord  # type: ignore
 from astropy import time as time
 from astropy import units as units
 
@@ -14,8 +14,8 @@ from kbmod.regionsearch.region_search import Filter
 
 
 @dataclass(init=False)
-class List(Backend):
-    """A backend for in memory lists of observation pointings, locations and times.
+class ObservationList(Backend):
+    """A backend for sources provided explicitily to instance in lists of ra, dec, time, observation location and field of view.
 
     Attributes
     ----------
@@ -26,9 +26,16 @@ class List(Backend):
     observation_time : time.Time
         The time of the observations.
     observation_location : coord.EarthLocation
-        The location of the observations.
+        The location of the observations. This should be the location of the telescope.
+    observation_fov : coord.Angle
+        The field of view of the observations. This should enclose any imagery that is associated with the observation.
+    observation_identifier : np.ndarray
+        The observation identifier. This is an array of values that uniquely identifies each observation.
 
-    The number of elements in each of the above attributes must be the same. This is assumed and not explicitly checked.
+    Notes
+    -----
+    The attributes observation_ra, observation_dec, observation_time, observation_location and observation_fov store lists of values comprising each observation.
+    They must all have the same shape.
     """
 
     observation_ra: coord.Angle
@@ -36,6 +43,7 @@ class List(Backend):
     observation_time: time.Time
     observation_location: coord.EarthLocation
     observation_fov: coord.Angle
+    observation_identifier: np.ndarray
 
     def __init__(
         self,
@@ -44,28 +52,45 @@ class List(Backend):
         observation_time: time.Time,
         observation_location: coord.EarthLocation,
         observation_fov: coord.Angle,
+        observation_identifier: np.ndarray,
         **kwargs
     ) -> None:
         super().__init__(**kwargs)
+
         self.observation_ra = observation_ra
         self.observation_dec = observation_dec
         self.observation_time = observation_time
         self.observation_location = observation_location
         self.observation_fov = observation_fov
+        self.observation_identifier = observation_identifier
+        if (
+            observation_dec.shape != observation_ra.shape
+            or observation_time.shape != observation_ra.shape
+            or observation_location.shape != observation_ra.shape
+            or observation_fov.shape != observation_ra.shape
+            or observation_identifier.shape != observation_ra.shape
+        ):
+            raise ValueError(
+                "observation_ra, observation_dec, observation_time, observation_location, observation_fov and observation_identifier must have the same shape"
+            )
 
     def region_search(self, filter: Filter) -> np.ndarray:
-        """Returns a SearchSet of pointings that match the given filter.
+        """
+        Returns a numpy.ndarray of observation identifiers that match the filter.
+        The filter must have attributes search_ra, search_dec, search_time, search_location, and search_fov.
 
         Parameters
         ----------
         filter : Filter
             The filter to use for the search.
+            The filter must have attributes search_ra, search_dec, search_time, search_location, and search_fov.
 
         Returns
         -------
         numpy.ndarray[int]
             A list of matching indices.
         """
+        matching_observation_identifier = np.array([], dtype=self.observation_identifier.dtype)
         if hasattr(self, "observations_to_indices"):
             pointing = coord.SkyCoord(filter.search_ra, filter.search_dec)
             matching_index = self.observations_to_indices(pointing, None, filter.search_fov, None)  # type: ignore
@@ -73,5 +98,6 @@ class List(Backend):
             self.observation_index = self.observations_to_indices(  # type: ignore
                 pointing, self.observation_time, self.observation_fov, self.observation_location
             )
-            self.index_list = np.nonzero(self.observation_index == matching_index)[0]
-        return self.index_list
+            index_list = np.nonzero(self.observation_index == matching_index)[0]
+            matching_observation_identifier = self.observation_identifier[index_list]
+        return matching_observation_identifier

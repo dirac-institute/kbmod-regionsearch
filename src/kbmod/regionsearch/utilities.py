@@ -2,11 +2,15 @@ import os
 import random
 import typing
 
-import astropy.table
+import astropy.table  # type: ignore
 import numpy as np
 from astropy import time
 from astropy import units as u
-from astropy.coordinates import EarthLocation, SkyCoord, solar_system_ephemeris
+from astropy.coordinates import (  # type: ignore
+    EarthLocation,
+    SkyCoord,
+    solar_system_ephemeris,
+)
 
 
 class RegionSearchClusterData(object):
@@ -18,6 +22,19 @@ class RegionSearchClusterData(object):
 
     Attributes
     ----------
+    version : int
+        The version of the data. This is manually incremented whenever a material change is made to the data generation. It appears in the filename and the
+        metadata and is used to check that data in a file is compatible with the code.
+    seed : int
+        The seed for the random number generator. This appears in the filename. It is used to generate the data idempotently.
+    clustercnt : int
+        The number of clusters to generate. This appears in the filename.
+    samplespercluster : int
+        The number of samples per cluster to generate. This appears in the filename.
+    data_loaded : bool
+        True if the data have been loaded from a file.
+    data_generated : bool
+        True if the data have been generated.
     """
 
     def __init__(
@@ -30,6 +47,38 @@ class RegionSearchClusterData(object):
         samplespercluster: int = 1000,
         removecache: bool = False,
     ) -> None:
+        """
+        Parameters
+        ----------
+        basename : str
+            The base name of the file to read or write. This is the first part of the file name.
+            The default value is "clustered-data".
+            The full name includes the directory, basename, seed, clustercnt, samplespercluster, version, section name, and suffix.
+        suffix : str
+            The suffix of the file to read or write. Thisis the last part of the file name.
+            The default value is ".ecsv" and seems the best choice for astropy tables.
+        format : str
+            The format of the file to read or write. This is coordinated with the suffix.
+            The default value is "ascii.ecsv" and seems the best choice for astropy tables.
+        seed : int
+            The seed for the random number generator. This is included in the filename.
+        clustercnt : int
+            The number of clusters to generate. This is included in the filename.
+        samplespercluster : int
+            The number of samples per cluster to generate. This is included in the filename.
+        removecache : bool
+            If True, remove the cache files and regenerate the data.
+            If False, use the cache files if they exist.
+
+        Notes
+        -----
+        The data are generated if they do not exist.
+        If the data are generated, they are saved in the tmp directory if that exists.
+        If the filename is found in the directory "data" then that will be used.
+        The files in "tmp" are ignored by git. The files in "data" are controlled by git.
+        The full name includes the directory, basename, seed, clustercnt, samplespercluster, version, section name, and suffix.
+        The version is checked when reading the file.
+        """
         # See https://docs.astropy.org/en/stable/io/unified.html#table-serialization-methods
         self.version = "1"
         # seed for random number generator
@@ -82,6 +131,13 @@ class RegionSearchClusterData(object):
             raise Exception(f"Could not read or generate data")
 
     def generate_and_save(self, basename, suffix, format, sections):
+        """
+        Generate the data and save them in the tmp directory.
+
+        Parameters
+        ----------
+        basename : str
+        """
         if self._generate_data():
             if os.path.isdir("tmp"):
                 for section in sections:
@@ -91,9 +147,45 @@ class RegionSearchClusterData(object):
             self.data_generated = True
 
     def __filename(self, dirname, basename, sectionname, suffix):
+        """
+        Return the full filename.
+
+        Parameters
+        ----------
+        dirname : str
+            The directory name. This is "tmp" or "data".
+        basename : str
+            The base name of the file to read or write.
+        sectionname : str
+            The section name.
+        suffix : str
+            The suffix of the file to read or write. Thisis the last part of the file name.
+
+        Returns
+        -------
+        str
+            The full filename.
+        """
         return f"{dirname}/{basename}-{self.seed}-{self.clustercnt}-{self.samplespercluster}-{self.version}-{sectionname}{suffix}"
 
     def read_table(self, filename: str, format: str, colnames: typing.List[str]):
+        """
+        Read the table from the file and validate the version.
+
+        Parameters
+        ----------
+        filename : str
+            The full filename.
+        format : str
+            The format of the file to read or write.
+        colnames : typing.List[str]
+            The list of column names to read from the file. The file may contain other columns but it must have these columns.
+        Returns
+        -------
+        bool
+            True if the table was read and the version is valid and all of the columns are present.
+            False if the table was not read or the version is invalid or any of the columns are missing.
+        """
         hold_version = self.version
         try:
             table = astropy.table.Table.read(filename, format=format)
@@ -111,6 +203,18 @@ class RegionSearchClusterData(object):
         return True
 
     def write_table(self, filename: str, format: str, colnames: typing.List[str]):
+        """
+        Write the table to the file including al the columns in colnames.
+
+        Parameters
+        ----------
+        filename : str
+            The full filename.
+        format : str
+            The format of the file to read or write.
+        colnames : typing.List[str]
+            The list of column names to write to the file.
+        """
         if os.path.exists(filename):
             os.remove(filename)
         with open(filename, "w") as f:
@@ -124,7 +228,9 @@ class RegionSearchClusterData(object):
         return True
 
     def _generate_data(self):
-        """Generate the data for the test."""
+        """
+        Generate the data for the test.
+        """
         if self.data_loaded:
             return
 
@@ -147,7 +253,7 @@ class RegionSearchClusterData(object):
 
         # the number of rows in the test dataset
         self.rowcnt = self.clustercnt * self.samplespercluster
-        self.cluster_id = [i for i in range(self.clustercnt) for _ in range(self.samplespercluster)]
+        self.cluster_id = np.array([i for i in range(self.clustercnt) for _ in range(self.samplespercluster)])
 
         baryra = [
             (i[0] + random.uniform(-1, 1)) % 360.0 - 180.0
@@ -163,7 +269,7 @@ class RegionSearchClusterData(object):
             self.clusterdistances[i] for i in range(self.clustercnt) for _ in range(self.samplespercluster)
         ] * u.au
 
-        # Vera Rubin Observatory for all samles
+        # Vera Rubin Observatory for all samples
         # see https://www.lsst.org/scientists/keynumbers
         self.observation_geolocation = EarthLocation.from_geodetic(
             [-70.749417] * self.rowcnt * u.deg, [-30.244633] * self.rowcnt * u.deg, [2647] * self.rowcnt * u.m
