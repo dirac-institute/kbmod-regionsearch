@@ -180,6 +180,7 @@ class RegionSearchClusterData(object):
             The format of the file to read or write.
         colnames : typing.List[str]
             The list of column names to read from the file. The file may contain other columns but it must have these columns.
+
         Returns
         -------
         bool
@@ -204,7 +205,7 @@ class RegionSearchClusterData(object):
 
     def write_table(self, filename: str, format: str, colnames: typing.List[str]):
         """
-        Write the table to the file including al the columns in colnames.
+        Write the table to the file including all the columns in colnames.
 
         Parameters
         ----------

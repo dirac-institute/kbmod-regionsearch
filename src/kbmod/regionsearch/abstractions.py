@@ -59,7 +59,9 @@ class Backend(ABC):
         numpy.ndarray
             Observation identifiers of pointings that match the given filter.
         """
-        pass
+        if not hasattr(self, "observations_to_indices"):
+            raise NotImplementedError("region_search requires an implementation of observations_to_indices")
+        return numpy.array([])
 
 
 class ObservationIndexer(ABC):

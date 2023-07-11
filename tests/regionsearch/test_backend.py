@@ -12,8 +12,25 @@ from astropy.coordinates import (  # type: ignore
 )
 from astropy.time import Time  # type: ignore
 
-from kbmod.regionsearch import backend, indexers, utilities
+from kbmod.regionsearch import abstractions, backend, indexers, utilities
 from kbmod.regionsearch.region_search import Filter
+
+
+def test_backend_abstract():
+    """Tests that the backend raises an exception when region_search is called without an indexer."""
+
+    class TestBackend(abstractions.Backend):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+
+        def region_search(self, filter: Filter) -> np.ndarray:
+            return super().region_search(filter)
+
+    b = TestBackend()
+    assert b is not None
+    with pytest.raises(NotImplementedError):
+        b.region_search(Filter())
+        assert False, "expected NotImplementedError when calling region_search without an indexer"
 
 
 def test_observationlist_init():
@@ -47,6 +64,25 @@ def test_observationlist_consistency():
     observation_identifier = data.cluster_id
     with pytest.raises(ValueError):
         backend.ObservationList(ra, dec, time, location, fov, observation_identifier)
+
+
+def test_observationlist_missing_observation_to_indices():
+    """Tests that the backend raises an exception when region_search is called without an indexer."""
+    data = utilities.RegionSearchClusterData(clustercnt=5, samplespercluster=10, removecache=True)
+
+    ra = data.observation_pointing.ra
+    dec = data.observation_pointing.dec
+    time = data.observation_time
+    location = data.observation_geolocation
+    fov = np.ones([data.rowcnt]) * Angle(1, "deg")
+    observation_identifier = data.cluster_id
+    b = backend.ObservationList(ra, dec, time, location, fov, observation_identifier)
+    with pytest.raises(NotImplementedError):
+        b.region_search(Filter())
+        assert (
+            False
+        ), "Expect NotImplementedError when region_search is called without an observation_to_indices method (missing ObservationIdexer)."
+    assert True
 
 
 def test_observationlist_partition():

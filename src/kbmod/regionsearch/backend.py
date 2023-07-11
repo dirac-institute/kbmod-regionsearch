@@ -1,5 +1,5 @@
 """
-lincc-frameworks provides implementations of ``abstractions.Backend`` that may be composed with an implementation of ``abstractions.ObserverationIndexer`` to provide a complete region search.
+Provides implementations of ``abstractions.Backend`` that may be composed with an implementation of ``abstractions.ObserverationIndexer`` to provide a complete region search.
 """
 
 from dataclasses import dataclass
@@ -91,13 +91,14 @@ class ObservationList(Backend):
             A list of matching indices.
         """
         matching_observation_identifier = np.array([], dtype=self.observation_identifier.dtype)
-        if hasattr(self, "observations_to_indices"):
-            pointing = coord.SkyCoord(filter.search_ra, filter.search_dec)
-            matching_index = self.observations_to_indices(pointing, None, filter.search_fov, None)  # type: ignore
-            pointing = coord.SkyCoord(self.observation_ra, self.observation_dec)
-            self.observation_index = self.observations_to_indices(  # type: ignore
-                pointing, self.observation_time, self.observation_fov, self.observation_location
-            )
-            index_list = np.nonzero(self.observation_index == matching_index)[0]
-            matching_observation_identifier = self.observation_identifier[index_list]
+        if not hasattr(self, "observations_to_indices"):
+            raise NotImplementedError("region_search requires an implementation of observations_to_indices")
+        pointing = coord.SkyCoord(filter.search_ra, filter.search_dec)
+        matching_index = self.observations_to_indices(pointing, None, filter.search_fov, None)  # type: ignore
+        pointing = coord.SkyCoord(self.observation_ra, self.observation_dec)
+        self.observation_index = self.observations_to_indices(  # type: ignore
+            pointing, self.observation_time, self.observation_fov, self.observation_location
+        )
+        index_list = np.nonzero(self.observation_index == matching_index)[0]
+        matching_observation_identifier = self.observation_identifier[index_list]
         return matching_observation_identifier

@@ -1,5 +1,5 @@
 """
-lincc-frameworks provides implementations of ``abstractions.ObserverationIndexer`` that may be composed with an implementation of ``abstractions.Backend`` to provide a complete region search.
+Provides implementations of ``abstractions.ObserverationIndexer`` that may be composed with an implementation of ``abstractions.Backend`` to provide a complete region search.
 """
 import math
 
