@@ -10,6 +10,7 @@ from astropy.coordinates import (  # type: ignore
     EarthLocation,
     SkyCoord,
     solar_system_ephemeris,
+    uniform_spherical_random_surface,
 )
 
 
@@ -80,7 +81,7 @@ class RegionSearchClusterData(object):
         The version is checked when reading the file.
         """
         # See https://docs.astropy.org/en/stable/io/unified.html#table-serialization-methods
-        self.version = "1"
+        self.version = "2"
         # seed for random number generator
         self.seed = seed
         # number of clusters in test
@@ -248,9 +249,11 @@ class RegionSearchClusterData(object):
             self.clusterdistances = [2]
             self.clusterdistances.extend([random.randrange(2, 10000) for _ in range(self.clustercnt - 1)])
 
-        clusters = [[random.uniform(0.0, 360.0), random.uniform(0, 180.0)] for _ in range(self.clustercnt)]
-
-        self.clusters = [[i[0] - 180.0, i[1] - 90.0] for i in clusters]
+        _clusters = uniform_spherical_random_surface(self.clustercnt)
+        self.clusters = [
+            [i.value - 180.0, j.value] for i, j in zip(_clusters.lon.to(u.deg), _clusters.lat.to(u.deg))
+        ]
+        clusters = np.stack([_clusters.lon.to(u.deg).value, _clusters.lat.to(u.deg).value + 90.0], axis=1)
 
         # the number of rows in the test dataset
         self.rowcnt = self.clustercnt * self.samplespercluster
