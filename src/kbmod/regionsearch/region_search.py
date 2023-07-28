@@ -14,19 +14,19 @@ class Filter:
     search_ra: Angle = None
     search_dec: Angle = None
     search_distance: Distance = None
-    search_fov: Angle = None
+    search_radius: Angle = None
 
     def __init__(
         self,
         search_ra: Angle = None,
         search_dec: Angle = None,
         search_distance: Distance = None,
-        search_fov: Angle = None,
+        search_radius: Angle = None,
     ):
         self.with_ra(search_ra)
         self.with_dec(search_dec)
         self.with_distance(search_distance)
-        self.with_fov(search_fov)
+        self.with_radius(search_radius)
 
     def __repr__(self):
         return f"Filter(ra={self.search_ra}, dec={self.search_dec}, search_distance={self.search_distance})"
@@ -49,7 +49,7 @@ class Filter:
             self.search_distance = Distance(search_distance, unit=u.au)
         return self
 
-    def with_fov(self, search_fov: Angle):
-        if search_fov is not None:
-            self.search_fov = Angle(search_fov, unit=u.deg)
+    def with_radius(self, search_radius: Angle):
+        if search_radius is not None:
+            self.search_radius = Angle(search_radius, unit=u.deg)
         return self

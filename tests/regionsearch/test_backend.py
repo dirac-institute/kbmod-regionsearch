@@ -41,14 +41,14 @@ def test_observationlist_init():
     dec = data.observation_pointing.dec
     time = data.observation_time
     location = data.observation_geolocation
-    fov = np.ones([data.rowcnt]) * Angle(1, "deg")
+    radius = np.ones([data.rowcnt]) * Angle(1, "deg")
     observation_identifier = data.cluster_id
-    b = backend.ObservationList(ra, dec, time, location, fov, observation_identifier)
+    b = backend.ObservationList(ra, dec, time, location, radius, observation_identifier)
     assert all(b.observation_ra == ra)
     assert all(b.observation_dec == dec)
     assert all(b.observation_time == time)
     assert all(b.observation_location == location)
-    assert all(b.observation_fov == fov)
+    assert all(b.observation_radius == radius)
     assert all(b.observation_identifier == observation_identifier)
 
 
@@ -60,10 +60,10 @@ def test_observationlist_consistency():
     dec = data.observation_pointing.dec
     time = data.observation_time
     location = data.observation_geolocation
-    fov = Angle(1, "deg")
+    radius = Angle(1, "deg")
     observation_identifier = data.cluster_id
     with pytest.raises(ValueError):
-        backend.ObservationList(ra, dec, time, location, fov, observation_identifier)
+        backend.ObservationList(ra, dec, time, location, radius, observation_identifier)
 
 
 def test_observationlist_missing_observation_to_indices():
@@ -74,9 +74,9 @@ def test_observationlist_missing_observation_to_indices():
     dec = data.observation_pointing.dec
     time = data.observation_time
     location = data.observation_geolocation
-    fov = np.ones([data.rowcnt]) * Angle(1, "deg")
+    radius = np.ones([data.rowcnt]) * Angle(1, "deg")
     observation_identifier = data.cluster_id
-    b = backend.ObservationList(ra, dec, time, location, fov, observation_identifier)
+    b = backend.ObservationList(ra, dec, time, location, radius, observation_identifier)
     with pytest.raises(NotImplementedError):
         b.region_search(Filter())
         assert (
@@ -100,31 +100,34 @@ def test_observationlist_partition():
     dec = data.observation_pointing.dec
     time = data.observation_time
     location = data.observation_geolocation
-    fov = np.ones([data.rowcnt]) * Angle(2, "deg")
+    radius = np.ones([data.rowcnt]) * Angle(2, "deg")
     observation_identifier = np.array([f"file:epyc/observations/{i:04d}" for i in range(data.rowcnt)])
     clusteri = 0
     search_ra = (data.clusters[clusteri][0]) * u.deg
     search_dec = (data.clusters[clusteri][1]) * u.deg
     search_distance = data.clusterdistances[clusteri] * u.au
-    search_fov = Angle(4.0, "deg")
+    search_radius = Angle(4.0, "deg")
     regionsearch = TestRegionSearchList(
         observation_ra=ra,
         observation_dec=dec,
         observation_time=time,
         observation_location=location,
-        observation_fov=fov,
+        observation_radius=radius,
         observation_identifier=observation_identifier,
         search_ra=search_ra,
         search_dec=search_dec,
         search_distance=search_distance,
-        search_fov=search_fov,
+        search_radius=search_radius,
         is_in_index=clusteri,
         is_out_index=~clusteri,
     )
     assert regionsearch is not None
     searchresults = regionsearch.region_search(
         Filter(
-            search_ra=search_ra, search_dec=search_dec, search_distance=search_distance, search_fov=search_fov
+            search_ra=search_ra,
+            search_dec=search_dec,
+            search_distance=search_distance,
+            search_radius=search_radius,
         )
     )
     assert searchresults is not None

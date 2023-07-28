@@ -92,7 +92,7 @@ class ObservationIndexer(ABC):
 
     @abstractmethod
     def observations_to_indices(
-        self, pointing: SkyCoord, time: Time, fov: Angle, location: EarthLocation
+        self, pointing: SkyCoord, time: Time, radius: Angle, location: EarthLocation
     ) -> numpy.ndarray:
         """Returns a numpy.ndarray of cluster indices for each of the observations in the arguments.
         The interpretation of the cluster indices is up to the implementation. The indices should
@@ -106,7 +106,7 @@ class ObservationIndexer(ABC):
             The pointing of each observation.
         time : astropy.time.Time
             The time of each observation.
-        fov : astropy.coordinates.Angle
+        radius : astropy.coordinates.Angle
             The field of view of each observation. The field of view is the radius of the
             circular region centered on the pointing and contains all the data in the observation.
         location : astropy.coordinates.EarthLocation

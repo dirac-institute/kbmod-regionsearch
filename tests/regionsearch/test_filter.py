@@ -1,5 +1,5 @@
 """Test the `Filter` class for region search"""
-from astropy import units as u
+from astropy import units as u  # type: ignore
 
 from kbmod.regionsearch.region_search import Filter
 
@@ -26,7 +26,7 @@ def test_filter_unitargs() -> None:
     assert output.search_ra == 42 * u.deg
     assert output.search_dec == -28 * u.deg
     assert output.search_distance == 30 * u.au
-    assert output.search_fov == 1 * u.deg
+    assert output.search_radius == 1 * u.deg
 
 
 def test_filter_none() -> None:
@@ -35,7 +35,7 @@ def test_filter_none() -> None:
     assert output.search_ra is None
     assert output.search_dec is None
     assert output.search_distance is None
-    assert output.search_fov is None
+    assert output.search_radius is None
 
 
 def test_filter_literate() -> None:
