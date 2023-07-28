@@ -29,7 +29,7 @@ class PartitionIndexer(ObservationIndexer):
         search_ra: coordinates.Longitude,
         search_dec: coordinates.Latitude,
         search_distance: coordinates.Distance,
-        search_fov: coordinates.Angle,
+        search_radius: coordinates.Angle,
         is_in_index: int,
         is_out_index: int,
         **kwargs
@@ -45,7 +45,7 @@ class PartitionIndexer(ObservationIndexer):
             The declination of the center of the sphere.
         search_distance : astropy.coordinates.Distance
             The distance from the barycenter to the center of the sphere.
-        search_fov : astropy.coordinates.Angle
+        search_radius : astropy.coordinates.Angle
             The angle subtended by the sphere at the barycenter.
         is_in_index : int
             The index to assign to observations that intersect the sphere.
@@ -59,15 +59,15 @@ class PartitionIndexer(ObservationIndexer):
         """
         super().__init__(**kwargs)
         self.obssky = coordinates.SkyCoord(search_ra, search_dec, distance=search_distance, frame="icrs")
-        self.fov = search_fov
+        self.radius = search_radius
         self.is_in_index = is_in_index
         self.is_out_index = is_out_index
 
     def observations_to_indices(
-        self, pointing: SkyCoord, time: Time, fov: coordinates.Angle, location: EarthLocation
+        self, pointing: SkyCoord, time: Time, radius: coordinates.Angle, location: EarthLocation
     ) -> numpy.ndarray:
         """
-        Returns a numpy array of indices for each observation specified by pointing, time, fov and location.
+        Returns a numpy array of indices for each observation specified by pointing, time, radius and location.
 
         Parameters
         ----------
@@ -75,7 +75,7 @@ class PartitionIndexer(ObservationIndexer):
             The pointing of the observations.
         time : astropy.time.Time
             The time of the observations.
-        fov : astropy.coordinates.Angle
+        radius : astropy.coordinates.Angle
             The field of view of the observations.
         location : astropy.coordinates.EarthLocation
             The location of the observations. This should be the location of the telescope.
@@ -83,13 +83,13 @@ class PartitionIndexer(ObservationIndexer):
         Returns
         -------
         numpy.ndarray
-            A numpy array of indices for each observation specified by pointing, time, fov and location.
+            A numpy array of indices for each observation specified by pointing, time, radius and location.
             An index of is_in_index is assigned to observations with a cone that intersect the sphere.
             An index of is_out_index is assigned to observations with a cone that do not intersect the sphere.
 
         Notes
         -----
-        The observation cone has an apex at the location of the telescope at the time of the observation with an axis that points in the direction of the pointing and an angle of fov.
+        The observation cone has an apex at the location of the telescope at the time of the observation with an axis that points in the direction of the pointing and an angle of radius.
         """
         if time is None:
             separation = self.obssky.separation(pointing)
@@ -102,5 +102,5 @@ class PartitionIndexer(ObservationIndexer):
                 # the next line is slow
                 observer_to_target = self.obssky.transform_to(obs_pos_itrs).gcrs
                 separation = observer_to_target.separation(pointing)
-        indices = numpy.where(separation < (self.fov + fov) * 0.5, self.is_in_index, self.is_out_index)
+        indices = numpy.where(separation < (self.radius + radius) * 0.5, self.is_in_index, self.is_out_index)
         return indices
